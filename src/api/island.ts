@@ -22,8 +22,8 @@ export const deleteIsland = (id: number):AxiosPromise<any> => request({
 })
 
 // 更新
-export const updateIsland = (id: number,data: any):AxiosPromise<any> => request({
-    url: `/information/${id}`,
+export const updateIsland = (data: any):AxiosPromise<any> => request({
+    url: `/information`,
     method:'PUT',
     data
 })

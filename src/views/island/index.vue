@@ -4,12 +4,13 @@
             <!-- 搜索 -->
             <div class="search-container">
                 <el-row :gutter="20">
-                    <el-col :span="4">
+                    <el-col :span="6">
                         <el-input v-model="query.introduction" placeholder="请输入简介" />
                     </el-col>
-                    <el-col :span="4">
+                    <el-col :span="12">
                         <el-button @click="handleSearch">查询</el-button>
                         <el-button @click="handleReset">重置</el-button>
+                        <el-button @click="handleAdd">新增</el-button>
                     </el-col>
                 </el-row>
             </div>
@@ -20,8 +21,9 @@
                 <el-table-column prop="type" label="类型" align="center" />
                 <el-table-column label="操作" align="center">
                     <template #default="scoped">
-                        <el-link :underline="false">修改</el-link>
-                        <el-link :underline="false" style="margin: 0 20px;">删除</el-link>
+                        <el-link :underline="false" @click="handleEdit(scoped.row)">修改</el-link>
+                        <el-link :underline="false" style="margin: 0 20px;"
+                            @click="handleDelete(scoped.row).id">删除</el-link>
                     </template>
                 </el-table-column>
             </el-table>
@@ -29,24 +31,45 @@
 
         <!-- 新增/修改 -->
 
-        <el-dialog v-model="dialogFormVisible" title="Shipping address" width="500">
-            <el-form :model="form">
-                <el-form-item label="Promotion name" :label-width="formLabelWidth">
+        <el-dialog v-model="dialogFormVisible" :title="title" width="500">
+            <el-form ref="formRuleRef" :model="form">
+                <el-form-item label="名称" :label-width="80">
                     <el-input v-model="form.name" autocomplete="off" />
                 </el-form-item>
-                <el-form-item label="Zones" :label-width="formLabelWidth">
-                    <el-select v-model="form.region" placeholder="Please select a zone">
-                        <el-option label="Zone No.1" value="shanghai" />
-                        <el-option label="Zone No.2" value="beijing" />
+                <el-form-item label="简介" :label-width="80">
+                    <el-input v-model="form.introduction" autocomplete="off" />
+                </el-form-item>
+                <el-form-item label="价格" :label-width="80">
+                    <el-input-number v-model="form.cost" autocomplete="off" />
+                </el-form-item>
+                <el-form-item label="等级" :label-width="80">
+                    <el-input-number v-model="form.grade" autocomplete="off" />
+                </el-form-item>
+
+                <el-form-item label="类型" :label-width="80">
+                    <el-select v-model="form.type" placeholder="类型">
+                        <el-option v-for="item in typeOptions" :label="item.value" :value="item.value" />
                     </el-select>
+                </el-form-item>
+                <el-form-item label="图片" :label-width="80">
+                    <el-upload v-model:file-list="fileList" class="upload-demo" :headers="headers" :action="action"
+                        multiple :on-preview="handlePreview" :on-success="handleSuccess" :limit="10">
+                        <el-button type="primary">上传图片</el-button>
+                        <template #tip>
+                            <div class="el-upload__tip">
+                                建议图片小于 500KB.
+                            </div>
+                        </template>
+                    </el-upload>
                 </el-form-item>
             </el-form>
             <template #footer>
                 <div class="dialog-footer">
-                    <el-button @click="dialogFormVisible = false">Cancel</el-button>
-                    <el-button type="primary" @click="dialogFormVisible = false">
-                        Confirm
+                    <el-button type="primary" @click="handleSubmit">
+                        确定
                     </el-button>
+                    <el-button @click="dialogFormVisible = false">取消</el-button>
+
                 </div>
             </template>
         </el-dialog>
@@ -54,18 +77,43 @@
 </template>
 
 <script setup lang='ts'>
-import { onMounted, reactive, ref } from 'vue'
-import { getIsland } from '../../api/island'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { addIsland, getIsland, updateIsland } from '../../api/island'
+import { useUserStore } from '../../store/modules/user'
+import { nanoid } from 'nanoid'
+import { ElMessage, ElMessageBox, type UploadProps, type UploadUserFile } from 'element-plus'
+import { BASE_URL } from '../../config'
+import { getToken } from '../../utils'
+const userStore = useUserStore()
+
+const typeOptions = [{
+    id: nanoid(),
+    value: '酒店',
+}, {
+    id: nanoid(),
+    value: '海岛'
+}, {
+    id: nanoid(),
+    value: '美食'
+},
+{
+    id: nanoid(),
+    value: '交通'
+}
+
+]
 
 const tableData = reactive({
     data: []
 })
 
 const query = reactive({
-    introduction: null
+    introduction: null,
+    // userId: userStore.userInfo.userId
 })
 
 const initData = async () => {
+    console.log(query)
     const res: any = await getIsland(query)
     if (res.code == 0) {
         tableData.data = res.data
@@ -83,13 +131,103 @@ const handleReset = () => {
     initData()
 }
 
+// 新增
+const handleAdd = () => {
+    dialogFormVisible.value = true
+}
+
+// 修改
+const handleEdit = (row: any) => {
+    current.value = 2
+    dialogFormVisible.value = true
+    Object.assign(form, row)
+}
+
+// 删除
+const handleDelete = (id: any) => {
+    ElMessageBox.confirm(
+        '是否删除?',
+        '提示',
+        {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+        }
+    ).then(async () => {
+        const res = await updateIsland(id)
+        if (res.code == 0) {
+            ElMessage.success('删除成功')
+            initData()
+        }
+    })
+}
+
+const current = ref(1)
+
+//弹窗标题
+const title = computed(() => current.value == 1 ? '新增' : '修改')
+
 // 弹出框显示隐藏
 const dialogFormVisible = ref(false)
 
+const formRuleRef = ref<null | HTMLFormElement>()
+
 // 表单信息
 const form = reactive({
-
+    name: '',
+    type: '',
+    introduction: '',
+    cost: 0,
+    num: 0,
+    grade: 0,
+    photosPath: ''
 })
+
+// 上传文件
+
+const fileList = ref<UploadUserFile[]>([])
+const action = BASE_URL + 'information/upload'
+const headers = {
+    'Authorization': getToken()
+}
+
+const handlePreview: UploadProps['onPreview'] = (uploadFile) => {
+    console.log(uploadFile)
+}
+const set = new Set()
+
+const handleSuccess: UploadProps['onSuccess'] = (_response, _uploadFile, _uploadFiles) => {
+    ElMessage.success('上传成功')
+}
+
+
+// 提交
+const handleSubmit = () => {
+    dialogFormVisible.value = false
+
+    formRuleRef.value?.validate(async (valid: boolean) => {
+        if (valid) {
+            if (current.value == 1) {
+                const paths = fileList.value.map(item => item.response)
+                form.photosPath = paths.join(',')
+                const res: any = await addIsland(form)
+                if (res.code == 0) {
+                    ElMessage.success('新增成功')
+                    initData()
+                }
+
+            } else {
+                const paths = fileList.value.map(item => item.response)
+                form.photosPath = paths.join(',')
+                const res: any = await updateIsland(form)
+                if (res.code == 0) {
+                    ElMessage.success('修改成功')
+                    initData()
+                }
+            }
+        }
+    })
+}
 
 onMounted(() => {
     initData()
