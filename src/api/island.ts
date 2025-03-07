@@ -3,7 +3,7 @@ import request from "../utils/request";
 
 // 查询
 export const getIsland = (params: any):AxiosPromise<any> => request({
-    url: '/information/infoAll',
+    url: '/information',
     method:'GET',
     params,
 })
