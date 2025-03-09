@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { userInfoService, userLogin } from "../../api/user";
-import { getToken, setToken, setUserInfo, getUserInfo as getInfo } from "../../utils";
+import { getToken, setToken, setUserInfo, getUserInfo as getInfo, removeToken } from "../../utils";
 import router from "../../router";
 export const useUserStore = defineStore("user", () => {
     // 用户信息
@@ -28,9 +28,15 @@ export const useUserStore = defineStore("user", () => {
         }
     }
 
+    const loginOut = () => {
+        removeToken()
+        location.reload()
+    }
+
     return {
         userInfo,
         login,
-        token
+        token,
+        loginOut
     }
 });

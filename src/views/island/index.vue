@@ -32,7 +32,7 @@
         <!-- 新增/修改 -->
 
         <el-dialog v-model="dialogFormVisible" :title="title" width="500" destroy-on-close center
-            @before-close="handleClose">
+            @before-close="handleClose" @close="handleClose">
             <el-form ref="formRuleRef" :model="form">
                 <el-form-item label="名称" :label-width="80">
                     <el-input v-model="form.name" autocomplete="off" />
@@ -59,8 +59,9 @@
                     </el-select>
                 </el-form-item>
                 <el-form-item label="图片" :label-width="80">
-                    <el-upload v-model:file-list="fileList" class="upload-demo" :headers="headers" :action="action"
-                        multiple :on-preview="handlePreview" :on-success="handleSuccess" :limit="10">
+                    <el-upload ref="uploadRef" v-model:file-list="fileList" class="upload-demo" :headers="headers"
+                        :action="action" multiple :on-preview="handlePreview" :on-success="handleSuccess"
+                        :before-upload="handleBeforeUpload" :limit="10">
                         <el-button type="primary">上传图片</el-button>
                         <template #tip>
                             <div class="el-upload__tip">
@@ -88,10 +89,10 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { addIsland, deleteIsland, getIsland, updateIsland } from '../../api/island'
 import { useUserStore } from '../../store/modules/user'
 import { nanoid } from 'nanoid'
-import { ElMessage, ElMessageBox, type UploadProps, type UploadUserFile } from 'element-plus'
+import { ElMessage, ElMessageBox, type UploadInstance, type UploadProps, type UploadUserFile } from 'element-plus'
 import { BASE_URL } from '../../config'
 import { getToken } from '../../utils'
-// const userStore = useUserStore()
+const userStore = useUserStore()
 
 const typeOptions = [{
     id: nanoid(),
@@ -185,13 +186,17 @@ const form = reactive({
     type: '',
     introduction: '',
     cost: 0,
-    num: 0,
+    // num: 0,
     grade: 0,
-    photos_path: ''
+    photosPath: '',
+    create_by: userStore.userInfo.nickName,
+    update_by: userStore.userInfo.nickName,
+    userId: userStore.userInfo.userId
 })
 
 // 上传文件
 
+const uploadRef = ref<UploadInstance>()
 const fileList = ref<UploadUserFile[]>([])
 const action = BASE_URL + 'information/upload'
 const headers = {
@@ -201,12 +206,16 @@ const headers = {
 const handlePreview: UploadProps['onPreview'] = (uploadFile) => {
     console.log(uploadFile)
 }
-const set = new Set()
 
 const handleSuccess: UploadProps['onSuccess'] = (_response, _uploadFile, _uploadFiles) => {
     ElMessage.success('上传成功')
 }
 
+const handleBeforeUpload = (file: UploadUserFile) => {
+    const fileName = Date.now() + '-' + file.name
+    const newFile = new File([file], fileName, { type: file.type })
+    return newFile
+}
 
 // 提交
 const handleSubmit = () => {
@@ -216,25 +225,29 @@ const handleSubmit = () => {
         if (valid) {
             if (current.value == 1) {
                 const paths = fileList.value.map(item => item.response)
-                form.photos_path = paths.join(',')
+                form.photosPath = paths.join(',')
                 const res: any = await addIsland(form)
                 if (res.code == 0) {
                     ElMessage.success('新增成功')
+                    handleClose()
                     initData()
                 }
 
             } else {
                 const paths = fileList.value.map(item => item.response)
-                form.photos_path = paths.join(',')
+                form.photosPath = paths.join(',')
                 const res: any = await updateIsland(form)
                 if (res.code == 0) {
                     ElMessage.success('修改成功')
+                    handleClose()
                     initData()
                 }
             }
         }
     })
 }
+
+
 
 // 关闭
 const handleClose = () => {
@@ -245,6 +258,8 @@ const handleClose = () => {
     form.type = ''
     form.num = 0
     form.grade = 0
+    form.photosPath = ''
+    uploadRef.value?.clearFiles()
 }
 
 onMounted(() => {
