@@ -23,7 +23,7 @@
                     <template #default="scoped">
                         <el-link :underline="false" @click="handleEdit(scoped.row)">修改</el-link>
                         <el-link :underline="false" style="margin: 0 20px;"
-                            @click="handleDelete(scoped.row).id">删除</el-link>
+                            @click="handleDelete(scoped.row.id)">删除</el-link>
                     </template>
                 </el-table-column>
             </el-table>
@@ -31,7 +31,8 @@
 
         <!-- 新增/修改 -->
 
-        <el-dialog v-model="dialogFormVisible" :title="title" width="500">
+        <el-dialog v-model="dialogFormVisible" :title="title" width="500" destroy-on-close center
+            @before-close="handleClose">
             <el-form ref="formRuleRef" :model="form">
                 <el-form-item label="名称" :label-width="80">
                     <el-input v-model="form.name" autocomplete="off" />
@@ -51,6 +52,12 @@
                         <el-option v-for="item in typeOptions" :label="item.value" :value="item.value" />
                     </el-select>
                 </el-form-item>
+
+                <el-form-item v-if="form.type != '海岛' && form.type != ''" label="所属海岛" :label-width="80">
+                    <el-select v-model="form.pid" placeholder="所属海岛">
+                        <el-option v-for="item in tableData.data" :label="item.name" :value="item.id" />
+                    </el-select>
+                </el-form-item>
                 <el-form-item label="图片" :label-width="80">
                     <el-upload v-model:file-list="fileList" class="upload-demo" :headers="headers" :action="action"
                         multiple :on-preview="handlePreview" :on-success="handleSuccess" :limit="10">
@@ -68,7 +75,7 @@
                     <el-button type="primary" @click="handleSubmit">
                         确定
                     </el-button>
-                    <el-button @click="dialogFormVisible = false">取消</el-button>
+                    <el-button @click="handleClose">取消</el-button>
 
                 </div>
             </template>
@@ -78,13 +85,13 @@
 
 <script setup lang='ts'>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { addIsland, getIsland, updateIsland } from '../../api/island'
+import { addIsland, deleteIsland, getIsland, updateIsland } from '../../api/island'
 import { useUserStore } from '../../store/modules/user'
 import { nanoid } from 'nanoid'
 import { ElMessage, ElMessageBox, type UploadProps, type UploadUserFile } from 'element-plus'
 import { BASE_URL } from '../../config'
 import { getToken } from '../../utils'
-const userStore = useUserStore()
+// const userStore = useUserStore()
 
 const typeOptions = [{
     id: nanoid(),
@@ -103,7 +110,7 @@ const typeOptions = [{
 
 ]
 
-const tableData = reactive({
+const tableData = reactive<any>({
     data: []
 })
 
@@ -113,7 +120,6 @@ const query = reactive({
 })
 
 const initData = async () => {
-    console.log(query)
     const res: any = await getIsland(query)
     if (res.code == 0) {
         tableData.data = res.data
@@ -145,6 +151,7 @@ const handleEdit = (row: any) => {
 
 // 删除
 const handleDelete = (id: any) => {
+    console.log(id)
     ElMessageBox.confirm(
         '是否删除?',
         '提示',
@@ -154,7 +161,7 @@ const handleDelete = (id: any) => {
             type: 'warning',
         }
     ).then(async () => {
-        const res = await updateIsland(id)
+        const res: any = await deleteIsland({ idList: id })
         if (res.code == 0) {
             ElMessage.success('删除成功')
             initData()
@@ -180,7 +187,7 @@ const form = reactive({
     cost: 0,
     num: 0,
     grade: 0,
-    photosPath: ''
+    photos_path: ''
 })
 
 // 上传文件
@@ -209,7 +216,7 @@ const handleSubmit = () => {
         if (valid) {
             if (current.value == 1) {
                 const paths = fileList.value.map(item => item.response)
-                form.photosPath = paths.join(',')
+                form.photos_path = paths.join(',')
                 const res: any = await addIsland(form)
                 if (res.code == 0) {
                     ElMessage.success('新增成功')
@@ -218,7 +225,7 @@ const handleSubmit = () => {
 
             } else {
                 const paths = fileList.value.map(item => item.response)
-                form.photosPath = paths.join(',')
+                form.photos_path = paths.join(',')
                 const res: any = await updateIsland(form)
                 if (res.code == 0) {
                     ElMessage.success('修改成功')
@@ -227,6 +234,17 @@ const handleSubmit = () => {
             }
         }
     })
+}
+
+// 关闭
+const handleClose = () => {
+    dialogFormVisible.value = false
+    form.name = ''
+    form.cost = 0
+    form.introduction = ''
+    form.type = ''
+    form.num = 0
+    form.grade = 0
 }
 
 onMounted(() => {
