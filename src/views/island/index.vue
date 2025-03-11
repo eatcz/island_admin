@@ -15,7 +15,7 @@
                 </el-row>
             </div>
             <!-- 表格 -->
-            <el-table :data="tableData.data">
+            <el-table :data="tableData.data" row-key="id" :prop="{ label: 'name', children: 'children' }">
                 <el-table-column prop="name" label="名称" align="center" />
                 <el-table-column prop="introduction" label="简介" align="center" />
                 <el-table-column prop="type" label="类型" align="center" />
@@ -32,35 +32,35 @@
         <!-- 新增/修改 -->
 
         <el-dialog v-model="dialogFormVisible" :title="title" width="500" destroy-on-close center
-            @before-close="handleClose">
-            <el-form ref="formRuleRef" :model="form">
-                <el-form-item label="名称" :label-width="80">
+            @before-close="handleClose" @closed="handleClose">
+            <el-form ref="formRuleRef" :model="form" :rules="rules">
+                <el-form-item label="名称" :label-width="80" prop="name">
                     <el-input v-model="form.name" autocomplete="off" />
                 </el-form-item>
-                <el-form-item label="简介" :label-width="80">
+                <el-form-item label="简介" :label-width="80" prop="introduction">
                     <el-input v-model="form.introduction" autocomplete="off" />
                 </el-form-item>
-                <el-form-item label="价格" :label-width="80">
+                <el-form-item label="价格" :label-width="80" prop="cost">
                     <el-input-number v-model="form.cost" autocomplete="off" />
                 </el-form-item>
-                <el-form-item label="等级" :label-width="80">
+                <el-form-item label="等级" :label-width="80" prop="grade">
                     <el-input-number v-model="form.grade" autocomplete="off" />
                 </el-form-item>
 
-                <el-form-item label="类型" :label-width="80">
+                <el-form-item label="类型" :label-width="80" prop="type">
                     <el-select v-model="form.type" placeholder="类型">
                         <el-option v-for="item in typeOptions" :label="item.value" :value="item.value" />
                     </el-select>
                 </el-form-item>
 
                 <el-form-item v-if="form.type != '海岛' && form.type != ''" label="所属海岛" :label-width="80">
-                    <el-select v-model="form.pid" placeholder="所属海岛">
+                    <el-select v-model="form.pid" placeholder="所属海岛" prop="pid">
                         <el-option v-for="item in tableData.data" :label="item.name" :value="item.id" />
                     </el-select>
                 </el-form-item>
-                <el-form-item label="图片" :label-width="80">
-                    <el-upload v-model:file-list="fileList" class="upload-demo" :headers="headers" :action="action"
-                        multiple :on-preview="handlePreview" :on-success="handleSuccess" :limit="10">
+                <el-form-item label="图片" :label-width="80" prop="photos_path">
+                    <el-upload ref="upload" v-model:file-list="fileList" class="upload-demo" :headers="headers"
+                        :action="action" multiple :on-preview="handlePreview" :on-success="handleSuccess" :limit="10">
                         <el-button type="primary">上传图片</el-button>
                         <template #tip>
                             <div class="el-upload__tip">
@@ -85,13 +85,11 @@
 
 <script setup lang='ts'>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { addIsland, deleteIsland, getIsland, updateIsland } from '../../api/island'
-import { useUserStore } from '../../store/modules/user'
+import { addIsland, deleteIsland, getIsland, updateIsland, getIslandTree } from '../../api/island'
 import { nanoid } from 'nanoid'
-import { ElMessage, ElMessageBox, type UploadProps, type UploadUserFile } from 'element-plus'
+import { ElMessage, ElMessageBox, type FormRules, type UploadInstance, type UploadProps, type UploadUserFile } from 'element-plus'
 import { BASE_URL } from '../../config'
 import { getToken } from '../../utils'
-// const userStore = useUserStore()
 
 const typeOptions = [{
     id: nanoid(),
@@ -120,9 +118,9 @@ const query = reactive({
 })
 
 const initData = async () => {
-    const res: any = await getIsland(query)
+    const res: any = await getIslandTree(query)
     if (res.code == 0) {
-        tableData.data = res.data
+        tableData.data = res.data.records
     }
 
 }
@@ -151,7 +149,6 @@ const handleEdit = (row: any) => {
 
 // 删除
 const handleDelete = (id: any) => {
-    console.log(id)
     ElMessageBox.confirm(
         '是否删除?',
         '提示',
@@ -180,7 +177,7 @@ const dialogFormVisible = ref(false)
 const formRuleRef = ref<null | HTMLFormElement>()
 
 // 表单信息
-const form = reactive({
+const form = reactive<RuleForm>({
     name: '',
     type: '',
     introduction: '',
@@ -201,16 +198,16 @@ const headers = {
 const handlePreview: UploadProps['onPreview'] = (uploadFile) => {
     console.log(uploadFile)
 }
-const set = new Set()
 
 const handleSuccess: UploadProps['onSuccess'] = (_response, _uploadFile, _uploadFiles) => {
     ElMessage.success('上传成功')
+    const paths = fileList.value.map(item => item.response)
+    form.photos_path = paths.join(',')
 }
 
 
 // 提交
 const handleSubmit = () => {
-    dialogFormVisible.value = false
 
     formRuleRef.value?.validate(async (valid: boolean) => {
         if (valid) {
@@ -221,6 +218,7 @@ const handleSubmit = () => {
                 if (res.code == 0) {
                     ElMessage.success('新增成功')
                     initData()
+                    dialogFormVisible.value = false
                 }
 
             } else {
@@ -230,6 +228,7 @@ const handleSubmit = () => {
                 if (res.code == 0) {
                     ElMessage.success('修改成功')
                     initData()
+                    dialogFormVisible.value = false
                 }
             }
         }
@@ -237,6 +236,7 @@ const handleSubmit = () => {
 }
 
 // 关闭
+const upload = ref<any>(null)
 const handleClose = () => {
     dialogFormVisible.value = false
     form.name = ''
@@ -245,10 +245,64 @@ const handleClose = () => {
     form.type = ''
     form.num = 0
     form.grade = 0
+    fileList.value = []
+    upload.value.clearFiles()
+
 }
 
 onMounted(() => {
     initData()
+})
+
+interface RuleForm {
+    name: string
+    cost: number
+    introduction: string
+    type: string
+    num: number
+    grade: number
+    pid?: number
+    photos_path: string
+}
+
+const rules = reactive<FormRules<RuleForm>>({
+    name: [
+        { required: true, message: '输入名称', trigger: 'blur' }
+    ],
+    cost: [
+        { required: true, message: '输入价格', trigger: 'blur' }
+    ],
+    grade: [
+        { required: true, message: '输入等级', trigger: 'blur' }
+    ],
+    introduction: [
+        {
+            required: true,
+            message: '输入简介',
+            trigger: 'change',
+        },
+    ],
+    type: [
+        {
+            required: true,
+            message: '选择类型',
+            trigger: 'change',
+        },
+    ],
+    pid: [
+        {
+            required: true,
+            message: '选择所属海岛',
+            trigger: 'change',
+        },
+    ],
+    photos_path: [
+        {
+            required: true,
+            message: '上传图片',
+            trigger: 'change',
+        },
+    ],
 })
 </script>
 

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getToken } from '.'
+import { getToken, removeToken } from '.'
 const request = axios.create({
     baseURL: 'http://9857731ku9.zicp.fun',
     timeout: 3000
@@ -12,7 +12,11 @@ request.interceptors.request.use(config => {
 
 request.interceptors.response.use(response => {
     return response.data
-} , error => {
+}, error => {
+    if(error.status == 401) {
+        removeToken()
+        location.reload()
+    }
     return Promise.reject(error)
 })
 

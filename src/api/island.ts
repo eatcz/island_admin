@@ -8,6 +8,13 @@ export const getIsland = (params: any):AxiosPromise<any> => request({
     params,
 })
 
+// 树形查询
+export const getIslandTree = (params: any):AxiosPromise<any> => request({
+    url: '/information/getInfoPid',
+    method:'GET',
+    params,
+})
+
 // 新增
 export const addIsland = (data: any):AxiosPromise<any> => request({
     url: '/information',
