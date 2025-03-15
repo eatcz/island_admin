@@ -39,9 +39,9 @@
                 <el-form-item label="简介" :label-width="80" prop="introduction">
                     <el-input v-model="form.introduction" autocomplete="off" />
                 </el-form-item>
-                <el-form-item label="价格" :label-width="80" prop="cost">
+                <!-- <el-form-item label="价格" :label-width="80" prop="cost">
                     <el-input-number v-model="form.cost" autocomplete="off" />
-                </el-form-item>
+                </el-form-item> -->
                 <el-form-item label="等级" :label-width="80" prop="grade">
                     <el-input-number v-model="form.grade" autocomplete="off" />
                 </el-form-item>
@@ -169,7 +169,7 @@ const form = reactive<RuleForm>({
     name: '',
     type: '',
     introduction: '',
-    cost: 0,
+    // cost: 0,
     grade: 0,
     photosPath: '',
     create_by: userStore.userInfo.nickName,
@@ -234,7 +234,7 @@ const upload = ref<any>(null)
 const handleClose = () => {
     dialogFormVisible.value = false
     form.name = ''
-    form.cost = 0
+    // form.cost = 0
     form.introduction = ''
     form.type = ''
     form.grade = 0
@@ -250,7 +250,7 @@ onMounted(() => {
 interface RuleForm {
     userId?: number
     name: string
-    cost: number
+    // cost: number
     introduction: string
     type: string
     grade: number
@@ -264,9 +264,9 @@ const rules = reactive<FormRules<RuleForm>>({
     name: [
         { required: true, message: '输入名称', trigger: 'blur' }
     ],
-    cost: [
-        { required: true, message: '输入价格', trigger: 'blur' }
-    ],
+    // cost: [
+    //     { required: true, message: '输入价格', trigger: 'blur' }
+    // ],
     grade: [
         { required: true, message: '输入等级', trigger: 'blur' }
     ],

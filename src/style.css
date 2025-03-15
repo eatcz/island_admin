@@ -18,3 +18,7 @@ body {
   line-clamp: 3;
   -webkit-line-clamp: 3
 }
+
+.chart{
+  height: 550px;
+}
